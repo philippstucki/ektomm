@@ -1,0 +1,59 @@
+#!/usr/bin/env php
+<?php
+
+require_once('vendor/swiftmailer/lib/swift_required.php');
+
+if (empty($argv[1]) || !is_readable($argv[1])) {
+    die('Usage: ektomm-send campaign'.PHP_EOL);
+}
+
+$config = array(
+
+    'host' => 'mailer.netzwirt.ch',
+    'port' => '25',
+    'username' => 'exil',
+    'password' => 'hsc7er9hkfsdf34ee',
+
+    'from' => 'info@famacubana.ch',
+    'subject' => 'Newsletter 2011',
+    'txtBody' => 'Textbody',
+    'htmlBody' => 'htmlbody',
+);
+
+//Create the Transport
+$transport = Swift_SmtpTransport::newInstance($config['host'], $config['port'])
+  ->setUsername($config['username'])
+  ->setPassword($config['password'])
+  ;
+
+//Create the Mailer using your created Transport
+$mailer = Swift_Mailer::newInstance($transport);
+
+fwrite(STDERR, "Starting to send...\n");
+$msgs = 0;
+
+while (FALSE !== ($line = fgets(STDIN))) {
+
+    $to = trim($line);
+    if($to !== '') {
+
+        //Create a message
+        $message = Swift_Message::newInstance($config['subject'])
+          ->setFrom($config['from'])
+          ->setTo(array($to))
+          ->setBody($config['txtBody'])
+          ;
+
+        //Send the message
+        $result = $mailer->send($message);
+
+        if($result === 1) {
+            $msgs++;
+            fwrite($to.PHP_EOL, STDOUT);
+        }
+    }
+}
+
+fwrite(STDERR, "Sent {$msgs} messages\n");
+
+
