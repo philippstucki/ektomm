@@ -7,9 +7,23 @@ http://www.catonmat.net/blog/set-operations-in-unix-shell/
 ektomm-send
 -----------
 
-ektomm-send takes one argument and reads recipients from stdin, one per line.
+Takes the config file as an argument and reads recipients from stdin, one per line.
 Whenever a message was sent succefully the respective recipient is printed to
 stdout, one per line.
+
+
+ektomm-preview-html
+-------------------
+
+Takes the config file as an argument and displays the html body of the campaign in
+the default browser.
+
+
+ektomm-validate
+---------------
+
+Validates email addresses given on stdin one per line. Outputs valid email addresses
+to stdout one per line. Invalid addresses are printed to stderr one per line.
 
 Sending a Campaign
 ------------------
