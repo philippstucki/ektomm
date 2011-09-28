@@ -2,29 +2,22 @@
 <?php
 
 function notifyError($to) {
-    fwrite(STDERR, "error sending to {$to}".PHP_EOL);
+    fwrite(STDERR, "failed sending to {$to}".PHP_EOL);
 }
 
 require_once('vendor/swiftmailer/lib/swift_required.php');
 
-if (empty($argv[1]) || !is_dir($argv[1]) || !is_readable($argv[1])) {
-    fwrite(STDERR, 'Usage: ektomm-send campaign'.PHP_EOL);
+if (empty($argv[1]) || !is_readable($argv[1])) {
+    fwrite(STDERR, 'Usage: ektomm-send campaignconfig.php'.PHP_EOL);
     die(1);
 }
 
-$cdir = $argv[1];
-
-// check if the config exists
-if (!is_readable($cdir.'/config.php')) {
-    fwrite(STDERR, 'config.php no readable'.PHP_EOL);
-    die(1);
-}
 // read the config
-require($argv[1].'/config.php');
+require($argv[1]);
 
-$transport = Swift_SmtpTransport::newInstance($config['host'], $config['port'])
-  ->setUsername($config['username'])
-  ->setPassword($config['password']);
+$transport = Swift_SmtpTransport::newInstance($config['host'], $config['port']);
+$transport->setUsername($config['username']);
+$transport->setPassword($config['password']);
 
 $mailer = Swift_Mailer::newInstance($transport);
 
@@ -32,14 +25,15 @@ fwrite(STDERR, "Starting to send...\n");
 $msgSent = 0;
 $msgError = 0;
 
-$message = Swift_Message::newInstance($config['subject'])
-  ->setFrom($config['from'])
-  ->setBody($config['txtBody']);
+$message = Swift_Message::newInstance($config['subject']);
+$message->setFrom($config['from']);
+$message->setBody($config['txtBody']);
 
 // add html body if needed
 if(!empty($config['htmlBody'])) {
     $message->addPart($config['htmlBody'], 'text/html');
 }
+
 while (FALSE !== ($line = fgets(STDIN))) {
 
     $to = trim($line);
@@ -57,7 +51,7 @@ while (FALSE !== ($line = fgets(STDIN))) {
         if($result === 1) {
             $msgSent++;
             fwrite(STDERR, "sent to {$to}".PHP_EOL);
-            fwrite(STDOUT, $to.' OK'.PHP_EOL);
+            fwrite(STDOUT, $to.PHP_EOL);
         } else {
             notifyError($to);
             $msgError++;
