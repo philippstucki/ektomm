@@ -3,46 +3,77 @@
 
 require_once('vendor/swiftmailer/lib/swift_required.php');
 
-if (empty($argv[1]) || !is_readable($argv[1])) {
-    die('Usage: ektomm-send campaign'.PHP_EOL);
+if (empty($argv[1]) || !is_dir($argv[1]) || !is_readable($argv[1])) {
+    fwrite(STDERR, 'Usage: ektomm-send campaign'.PHP_EOL);
+    die(1);
 }
 
-require($argv[1]);
+$cdir = $argv[1];
 
-//Create the Transport
+// check if the config exists
+if (!is_readable($cdir.'/config.php')) {
+    fwrite(STDERR, 'config.php no readable'.PHP_EOL);
+    die(1);
+}
+// read the config
+require($argv[1].'/config.php');
+
+// check for recipients file
+if (!is_readable($cdir.'/recipients.txt')) {
+    fwrite(STDERR, 'config.php no readable'.PHP_EOL);
+    die(1);
+}
+// read recipients
+$recipients = file($argv[1].'/recipients.txt');
+
+// try to read the sent file
+if (is_readable($cdir.'/sent.txt')) {
+    fwrite(STDERR, "sent.txt present, reading\n");
+    $sent = file($cdir.'/sent.txt', FILE_IGNORE_NEW_LINES);
+} else {
+    $sent = array();
+}
+
+// create handle for state handling
+$senthandle = fopen($cdir.'/sent.txt', 'a');
+$errorhandle = fopen($cdir.'/error.txt', 'a');
+
 $transport = Swift_SmtpTransport::newInstance($config['host'], $config['port'])
   ->setUsername($config['username'])
   ->setPassword($config['password']);
 
-//Create the Mailer using your created Transport
 $mailer = Swift_Mailer::newInstance($transport);
 
 fwrite(STDERR, "Starting to send...\n");
 $msgs = 0;
 
-while (FALSE !== ($line = fgets(STDIN))) {
+foreach ($recipients as $line) {
 
     $to = trim($line);
-    if($to !== '') {
+    if($to !== '' && !in_array($to, $sent)) {
 
-        //Create a message
         $message = Swift_Message::newInstance($config['subject'])
           ->setFrom($config['from'])
           ->setTo(array($to))
-          ->setBody($config['txtBody'])
-          ;
+          ->setBody($config['txtBody']);
 
-        //Send the message
+        if(!empty($config['htmlBody'])) {
+            $message->addPart($config['htmlBody'], 'text/html');
+        }
+
         $result = $mailer->send($message);
 
         if($result === 1) {
             $msgs++;
+            fwrite($senthandle, $to.PHP_EOL);
             fwrite(STDERR, "sent to {$to}".PHP_EOL);
-            fwrite(STDOUT, $to.PHP_EOL);
+            fwrite(STDOUT, $to.' OK'.PHP_EOL);
+        } else {
+            fwrite($errorhandle, $to.PHP_EOL);
+            fwrite(STDERR, "error sending to {$to}".PHP_EOL);
+            fwrite(STDOUT, $to.' ERROR'.PHP_EOL);
         }
     }
 }
 
 fwrite(STDERR, "Sent {$msgs} messages\n");
-
-
