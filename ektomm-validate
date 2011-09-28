@@ -55,8 +55,11 @@ function validEmail($email)
     return $isValid;
 }
 
-while (FALSE !== ($line = trim(fgets(STDIN)))) {
+while (FALSE !== ($line = fgets(STDIN))) {
+    $line = trim($line);
     if (validEmail($line)) {
         fwrite(STDOUT, $line.PHP_EOL);
+    } else {
+        fwrite(STDERR, 'INVALID: '.$line.PHP_EOL);
     }
 }
