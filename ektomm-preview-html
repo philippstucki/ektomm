@@ -1,12 +1,18 @@
 #!/usr/bin/env php
 <?php
 
-if (empty($argv[1]) || !is_readable($argv[1])) {
+if (empty($argv[1]) || !is_dir($argv[1]) || !is_readable($argv[1])) {
     fwrite(STDERR, 'Usage: ektomm-preview-html campaign'.PHP_EOL);
     die(1);
 }
-
-require($argv[1]);
+$cdir = $argv[1];
+// check if the config exists
+if (!is_readable($cdir.'/config.php')) {
+    fwrite(STDERR, 'config.php no readable'.PHP_EOL);
+    die(1);
+}
+// read the config
+require($argv[1].'/config.php');
 
 $tmpfile = tempnam(sys_get_temp_dir(), 'ektomm');
 $htmlfile = $tmpfile.'.html';

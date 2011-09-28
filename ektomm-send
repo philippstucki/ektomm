@@ -1,6 +1,13 @@
 #!/usr/bin/env php
 <?php
 
+function notifyError($to) {
+    global $errorhandle;
+    fwrite($errorhandle, $to.PHP_EOL);
+    fwrite(STDERR, "error sending to {$to}".PHP_EOL);
+    fwrite(STDOUT, $to.' ERROR'.PHP_EOL);
+}
+
 require_once('vendor/swiftmailer/lib/swift_required.php');
 
 if (empty($argv[1]) || !is_dir($argv[1]) || !is_readable($argv[1])) {
@@ -45,35 +52,44 @@ $transport = Swift_SmtpTransport::newInstance($config['host'], $config['port'])
 $mailer = Swift_Mailer::newInstance($transport);
 
 fwrite(STDERR, "Starting to send...\n");
-$msgs = 0;
+$msgSent = 0;
+$msgError = 0;
+
+$message = Swift_Message::newInstance($config['subject'])
+  ->setFrom($config['from'])
+  ->setBody($config['txtBody']);
+
+// add html body if needed
+if(!empty($config['htmlBody'])) {
+    $message->addPart($config['htmlBody'], 'text/html');
+}
 
 foreach ($recipients as $line) {
 
     $to = trim($line);
     if($to !== '' && !in_array($to, $sent)) {
 
-        $message = Swift_Message::newInstance($config['subject'])
-          ->setFrom($config['from'])
-          ->setTo(array($to))
-          ->setBody($config['txtBody']);
-
-        if(!empty($config['htmlBody'])) {
-            $message->addPart($config['htmlBody'], 'text/html');
+        try {
+            $message->setTo(array($to));
+        } catch(Swift_RfcComplianceException $e) {
+            notifyError($to);
+            $msgError++;
+            continue;
         }
 
-        $result = $mailer->send($message);
-
+        $result = $mailer->send($message, $failures);
         if($result === 1) {
-            $msgs++;
+            $msgSent++;
             fwrite($senthandle, $to.PHP_EOL);
             fwrite(STDERR, "sent to {$to}".PHP_EOL);
             fwrite(STDOUT, $to.' OK'.PHP_EOL);
         } else {
-            fwrite($errorhandle, $to.PHP_EOL);
-            fwrite(STDERR, "error sending to {$to}".PHP_EOL);
-            fwrite(STDOUT, $to.' ERROR'.PHP_EOL);
+            notifyError($to);
+            $msgError++;
         }
+
     }
 }
 
-fwrite(STDERR, "Sent {$msgs} messages\n");
+fwrite(STDERR, $msgSent.' messages sent, '.count($recipients).' recipients, '.$msgError.' failed'.PHP_EOL);
+
