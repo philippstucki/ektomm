@@ -2,10 +2,7 @@
 <?php
 
 function notifyError($to) {
-    global $errorhandle;
-    fwrite($errorhandle, $to.PHP_EOL);
     fwrite(STDERR, "error sending to {$to}".PHP_EOL);
-    fwrite(STDOUT, $to.' ERROR'.PHP_EOL);
 }
 
 require_once('vendor/swiftmailer/lib/swift_required.php');
@@ -25,26 +22,6 @@ if (!is_readable($cdir.'/config.php')) {
 // read the config
 require($argv[1].'/config.php');
 
-// check for recipients file
-if (!is_readable($cdir.'/recipients.txt')) {
-    fwrite(STDERR, 'config.php no readable'.PHP_EOL);
-    die(1);
-}
-// read recipients
-$recipients = file($argv[1].'/recipients.txt');
-
-// try to read the sent file
-if (is_readable($cdir.'/sent.txt')) {
-    fwrite(STDERR, "sent.txt present, reading\n");
-    $sent = file($cdir.'/sent.txt', FILE_IGNORE_NEW_LINES);
-} else {
-    $sent = array();
-}
-
-// create handle for state handling
-$senthandle = fopen($cdir.'/sent.txt', 'a');
-$errorhandle = fopen($cdir.'/error.txt', 'a');
-
 $transport = Swift_SmtpTransport::newInstance($config['host'], $config['port'])
   ->setUsername($config['username'])
   ->setPassword($config['password']);
@@ -63,11 +40,10 @@ $message = Swift_Message::newInstance($config['subject'])
 if(!empty($config['htmlBody'])) {
     $message->addPart($config['htmlBody'], 'text/html');
 }
-
-foreach ($recipients as $line) {
+while (FALSE !== ($line = fgets(STDIN))) {
 
     $to = trim($line);
-    if($to !== '' && !in_array($to, $sent)) {
+    if ($to !== '') {
 
         try {
             $message->setTo(array($to));
@@ -80,7 +56,6 @@ foreach ($recipients as $line) {
         $result = $mailer->send($message, $failures);
         if($result === 1) {
             $msgSent++;
-            fwrite($senthandle, $to.PHP_EOL);
             fwrite(STDERR, "sent to {$to}".PHP_EOL);
             fwrite(STDOUT, $to.' OK'.PHP_EOL);
         } else {
@@ -91,5 +66,4 @@ foreach ($recipients as $line) {
     }
 }
 
-fwrite(STDERR, $msgSent.' messages sent, '.count($recipients).' recipients, '.$msgError.' failed'.PHP_EOL);
-
+fwrite(STDERR, $msgSent.' messages sent, '.$msgError.' failed'.PHP_EOL);
