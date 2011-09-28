@@ -1,5 +1,12 @@
-EktoMM README
-=============
+EktoMM
+======
+
+EktoMM is a very simple mass mailer for the unix shell written in PHP. It 
+is split into simple commands which are used in the shell. It does only
+send mails using an external SMTP server and does not include handling
+of bounces and subscriptions.
+
+Lists are provided as text files with subscribers one per line.
 
 Set Operations in the Shell:
 http://www.catonmat.net/blog/set-operations-in-unix-shell/
