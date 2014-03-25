@@ -1,11 +1,10 @@
 #!/usr/bin/env php
 <?php
+require 'vendor/autoload.php';
 
 function notifyError($to) {
     fwrite(STDERR, "failed sending to {$to}".PHP_EOL);
 }
-
-require_once('vendor/swiftmailer/lib/swift_required.php');
 
 if (empty($argv[1]) || !is_readable($argv[1])) {
     fwrite(STDERR, 'Usage: ektomm-send campaignconfig.php'.PHP_EOL);
